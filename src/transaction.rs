@@ -9,10 +9,22 @@ pub struct ClientId {
     id: u16,
 }
 
+impl ClientId {
+    pub fn new(id: u16) -> Self {
+        Self { id }
+    }
+}
+
 #[derive(Debug, Deserialize, Eq, PartialEq, Hash, Copy, Clone)]
 #[serde(transparent)]
 pub struct TransactionId {
     id: u32,
+}
+
+impl TransactionId {
+    pub fn new(id: u32) -> Self {
+        Self { id }
+    }
 }
 
 /// Represents a transaction.
