@@ -1,5 +1,5 @@
 use std::path::Path;
-use transakt::run;
+use transakt::Transakt;
 
 fn main() {
     env_logger::init();
@@ -7,5 +7,5 @@ fn main() {
         .nth(1)
         .expect("Usage: cargo run -- <input_file>");
     let filepath = Path::new(&filename);
-    run(filepath).unwrap();
+    Transakt::read_from_csv(filepath).unwrap();
 }

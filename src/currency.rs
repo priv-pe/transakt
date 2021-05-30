@@ -18,7 +18,7 @@ pub enum CurrencyFormatError {
 /// The upper bound is not specified, but assuming that u64 should be sufficient.
 /// In any real system, this would need be more generic, to allow for multiple currencies to exist
 /// without implementing a separate structure for each one.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Currency {
     /// Holds the value as a single integer, without decimals.
     /// holding currency like this is that it's easier to add and multiply without dealing with

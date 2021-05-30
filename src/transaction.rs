@@ -3,20 +3,20 @@ use crate::Error;
 use serde::Deserialize;
 use std::convert::TryFrom;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Copy, Clone)]
 #[serde(transparent)]
 pub struct ClientId {
     id: u16,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Copy, Clone)]
 #[serde(transparent)]
 pub struct TransactionId {
     id: u32,
 }
 
 /// Represents a transaction.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Transaction {
     Deposit {
         client: ClientId,

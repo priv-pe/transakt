@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use transakt::run;
+use transakt::Transakt;
 
 #[test]
 pub fn scenario1() {
@@ -9,5 +9,5 @@ pub fn scenario1() {
     let mut filepath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     filepath.push("tests/scenario1.csv");
 
-    run(&filepath).unwrap()
+    Transakt::read_from_csv(&filepath).unwrap();
 }
