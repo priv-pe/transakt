@@ -2,6 +2,7 @@ use std::path::Path;
 use transakt::run;
 
 fn main() {
+    env_logger::init();
     let filename = std::env::args()
         .nth(1)
         .expect("Usage: cargo run -- <input_file>");

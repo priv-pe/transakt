@@ -21,7 +21,7 @@ pub fn run(filepath: &Path) -> Result<(), Error> {
     for record in csv.deserialize() {
         let transaction: TransactionRow = record.map_err(|_| Error::TransactionParseError)?;
         let transaction: Transaction = transaction.try_into()?;
-        println!("{:?}", transaction);
+        log::info!("{:?}", transaction);
     }
 
     Ok(())
