@@ -1,4 +1,5 @@
 mod transaction;
+mod currency;
 
 use crate::transaction::{Transaction, TransactionRow};
 

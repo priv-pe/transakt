@@ -1,3 +1,4 @@
+use crate::currency::Currency;
 use crate::Error;
 use serde::Deserialize;
 use std::convert::TryFrom;
@@ -12,14 +13,6 @@ pub struct ClientId {
 #[serde(transparent)]
 pub struct TransactionId {
     id: u32,
-}
-
-// TODO: currency should be represented as a fixed point value, not as floating point, since
-// floating point is not an accurate, lossless representation of a number in all cases.
-#[derive(Debug, Deserialize)]
-#[serde(transparent)]
-pub struct Currency {
-    amount: f64,
 }
 
 /// Represents a transaction.
