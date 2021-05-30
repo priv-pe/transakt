@@ -5,7 +5,6 @@ mod transaction;
 use crate::transaction::{ClientId, Transaction, TransactionId, TransactionRow};
 
 use crate::account::Account;
-use crate::Error::TransactionParseError;
 use csv::Trim;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -15,6 +14,9 @@ use std::path::Path;
 pub enum Error {
     TransactionParseError,
     DuplicateTransaction(TransactionId),
+    Overflow,
+    AccountLocked,
+    InsufficientFunds,
 }
 
 pub struct Transakt {
@@ -43,6 +45,7 @@ impl Transakt {
             let transaction: TransactionRow = record.map_err(|_| Error::TransactionParseError)?;
             let transaction: Transaction = transaction.try_into()?;
             log::info!("{:?}", transaction);
+            transakt.execute_transaction(transaction)?;
         }
         Ok(transakt)
     }
@@ -53,11 +56,111 @@ impl Transakt {
                 if self.transactions.contains_key(&tx) {
                     return Err(Error::DuplicateTransaction(tx));
                 }
-                self.transactions.insert(tx, transaction);
                 let account = self.accounts.entry(client).or_insert(Account::new(client));
+                //
+                account.deposit(amount)?;
+                self.transactions.insert(tx, transaction);
             }
-            _ => todo!(),
+            Transaction::Withdrawal { client, tx, amount } => {
+                if self.transactions.contains_key(&tx) {
+                    return Err(Error::DuplicateTransaction(tx));
+                }
+                let account = self.accounts.entry(client).or_insert(Account::new(client));
+                account.withdraw(amount)?;
+                self.transactions.insert(tx, transaction);
+            }
+            _ => {}
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::currency::Currency;
+    use crate::transaction::{ClientId, Transaction, TransactionId};
+    use crate::Transakt;
+
+    #[test]
+    fn execute_deposit() {
+        let mut transakt = Transakt::default();
+        // deposit 1.0 into account 1
+        transakt
+            .execute_transaction(Transaction::Deposit {
+                client: ClientId::new(1),
+                tx: TransactionId::new(1),
+                amount: Currency::new(1, 0).unwrap(),
+            })
+            .unwrap();
+        // account 1 shhould have 1.0
+        assert_eq!(transakt.accounts.len(), 1);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        assert_eq!(account.available(), &Currency::new(1, 0).unwrap());
+        // deposit 1.0 into account 1
+        transakt
+            .execute_transaction(Transaction::Deposit {
+                client: ClientId::new(1),
+                tx: TransactionId::new(2),
+                amount: Currency::new(1, 0).unwrap(),
+            })
+            .unwrap();
+        // account 1 shhould have 2.0
+        assert_eq!(transakt.accounts.len(), 1);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        assert_eq!(account.available(), &Currency::new(2, 0).unwrap());
+        // deposit 0.1 into account 2
+        transakt
+            .execute_transaction(Transaction::Deposit {
+                client: ClientId::new(2),
+                tx: TransactionId::new(3),
+                amount: Currency::new(0, 1000).unwrap(),
+            })
+            .unwrap();
+        // account 1 should have 1, account 2 should have 0.1
+        assert_eq!(transakt.accounts.len(), 2);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        assert_eq!(account.available(), &Currency::new(2, 0).unwrap());
+        let account = transakt.accounts.get(&ClientId::new(2)).unwrap();
+        assert_eq!(account.available(), &Currency::new(0, 1000).unwrap());
+    }
+
+    #[test]
+    fn execute_withdraw() {
+        // fund account 1 with 2.0
+        let mut transakt = Transakt::default();
+        transakt
+            .execute_transaction(Transaction::Deposit {
+                client: ClientId::new(1),
+                tx: TransactionId::new(1),
+                amount: Currency::new(2, 0).unwrap(),
+            })
+            .unwrap();
+        assert_eq!(transakt.accounts.len(), 1);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        // withdraw from account 1 1.0
+        assert_eq!(account.available(), &Currency::new(2, 0).unwrap());
+        transakt
+            .execute_transaction(Transaction::Withdrawal {
+                client: ClientId::new(1),
+                tx: TransactionId::new(2),
+                amount: Currency::new(1, 0).unwrap(),
+            })
+            .unwrap();
+        // account 1 should have 1.0
+        assert_eq!(transakt.accounts.len(), 1);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        assert_eq!(account.available(), &Currency::new(1, 0).unwrap());
+        // withdraw from account 1 0.05
+        transakt
+            .execute_transaction(Transaction::Withdrawal {
+                client: ClientId::new(1),
+                tx: TransactionId::new(3),
+                amount: Currency::new(0, 500).unwrap(),
+            })
+            .unwrap();
+        // account 1 should have 0.95
+        assert_eq!(transakt.accounts.len(), 1);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        assert_eq!(account.available(), &Currency::new(0, 9500).unwrap());
     }
 }
