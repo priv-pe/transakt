@@ -1,11 +1,27 @@
+mod transaction;
+
+use crate::transaction::{Transaction, TransactionRow};
+
+use csv::Trim;
+use std::convert::TryInto;
 use std::path::Path;
 
-pub fn run(filepath: &Path) {
+#[derive(Debug)]
+pub enum Error {
+    TransactionParseError,
+}
+
+pub fn run(filepath: &Path) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(true)
+        .trim(Trim::All)
         .from_path(filepath)
         .expect("Cannot open input file");
-    for record in csv.records() {
-        let _transaction = record.expect("Could not parse file");
+    for record in csv.deserialize() {
+        let transaction: TransactionRow = record.map_err(|_| Error::TransactionParseError)?;
+        let transaction: Transaction = transaction.try_into()?;
+        println!("{:?}", transaction);
     }
+
+    Ok(())
 }

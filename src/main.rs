@@ -6,5 +6,5 @@ fn main() {
         .nth(1)
         .expect("Usage: cargo run -- <input_file>");
     let filepath = Path::new(&filename);
-    run(filepath);
+    run(filepath).unwrap();
 }
