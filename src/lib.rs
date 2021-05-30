@@ -14,6 +14,7 @@ use std::path::Path;
 #[derive(Debug)]
 pub enum Error {
     TransactionParseError,
+    DuplicateTransaction(TransactionId),
 }
 
 pub struct Transakt {
@@ -46,5 +47,17 @@ impl Transakt {
         Ok(transakt)
     }
 
-    Ok(())
+    pub fn execute_transaction(&mut self, transaction: Transaction) -> Result<(), Error> {
+        match transaction {
+            Transaction::Deposit { client, tx, amount } => {
+                if self.transactions.contains_key(&tx) {
+                    return Err(Error::DuplicateTransaction(tx));
+                }
+                self.transactions.insert(tx, transaction);
+                let account = self.accounts.entry(client).or_insert(Account::new(client));
+            }
+            _ => todo!(),
+        }
+        Ok(())
+    }
 }
