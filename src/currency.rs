@@ -28,6 +28,12 @@ pub struct Currency {
     amount: u64,
 }
 
+impl Default for Currency {
+    fn default() -> Self {
+        Self { amount: 0 }
+    }
+}
+
 impl Currency {
     /// How much is one unit in the decimal representation.
     /// Examples:
