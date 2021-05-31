@@ -23,6 +23,10 @@ impl Account {
         &self.available
     }
 
+    pub fn held(&self) -> &Currency {
+        &self.held
+    }
+
     pub fn total(&self) -> Option<Currency> {
         self.available.checked_add(self.held)
     }
@@ -49,6 +53,19 @@ impl Account {
         if !self.is_locked() {
             let diff = self.available.checked_sub(amount);
             self.available = diff.ok_or(Error::InsufficientFunds)?;
+            Ok(())
+        } else {
+            Err(Error::AccountLocked)
+        }
+    }
+
+    pub fn hold(&mut self, amount: Currency) -> Result<(), Error> {
+        if !self.is_locked() {
+            // TODO: Should happen atomically
+            let sum = self.held.checked_add(amount);
+            self.held = sum.ok_or(Error::Overflow)?;
+            let diff = self.available.checked_sub(amount);
+            self.available = diff.ok_or(Error::Overflow)?;
             Ok(())
         } else {
             Err(Error::AccountLocked)
