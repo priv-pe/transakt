@@ -62,6 +62,21 @@ impl Account {
         }
     }
 
+    pub fn chargeback(&mut self, amount: Currency) -> Result<(), Error> {
+        if !self.is_locked() {
+            let diff = self.held.checked_sub(amount);
+            self.held = diff.ok_or(Error::Overflow)?;
+            if self.held.is_negative() {
+                // This should never happen
+                return Err(Error::InsufficientHeldFunds);
+            }
+            self.lock();
+            Ok(())
+        } else {
+            Err(Error::AccountLocked)
+        }
+    }
+
     pub fn hold(&mut self, amount: Currency) -> Result<(), Error> {
         if !self.is_locked() {
             // TODO: Should happen atomically

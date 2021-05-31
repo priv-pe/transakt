@@ -137,7 +137,30 @@ impl Transakt {
                     }
                 }
             }
-            _ => {}
+            Transaction::Chargeback { tx, .. } => {
+                if let Some(transaction) = self.transactions.get_mut(&tx) {
+                    match transaction {
+                        Transaction::Deposit {
+                            client,
+                            tx,
+                            amount,
+                            disputed,
+                        } => {
+                            if !*disputed {
+                                log::warn!("No dispute on {:?}", tx);
+                                return Err(Error::InvalidTransaction);
+                            }
+                            *disputed = false;
+                            // should never happen since we already have an existing transaction.
+                            let account = self.accounts.get_mut(client).unwrap();
+                            account.chargeback(*amount)?;
+                        }
+                        _ => {
+                            log::warn!("Invalid dispute on {:?}", tx);
+                        }
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -317,5 +340,47 @@ mod tests {
         assert_eq!(account.available(), &Currency::new(2, 0).unwrap());
         assert_eq!(account.held(), &Currency::new(0, 0).unwrap());
         assert_eq!(account.total(), Currency::new(2, 0).ok());
+    }
+
+    #[test]
+    fn execute_chargeback() {
+        // fund account 1 with 2.0
+        let mut transakt = Transakt::default();
+        transakt
+            .execute_transaction(Transaction::Deposit {
+                client: ClientId::new(1),
+                tx: TransactionId::new(1),
+                amount: Currency::new(2, 0).unwrap(),
+                disputed: false,
+            })
+            .unwrap();
+        assert_eq!(transakt.accounts.len(), 1);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        // withdraw from account 1 1.0
+        assert_eq!(account.available(), &Currency::new(2, 0).unwrap());
+        transakt
+            .execute_transaction(Transaction::Dispute {
+                client: ClientId::new(1),
+                tx: TransactionId::new(1),
+            })
+            .unwrap();
+        // account 1 should have 1.0
+        assert_eq!(transakt.accounts.len(), 1);
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        assert_eq!(account.available(), &Currency::new(0, 0).unwrap());
+        assert_eq!(account.held(), &Currency::new(2, 0).unwrap());
+        assert_eq!(account.total(), Currency::new(2, 0).ok());
+        // try withdraw from account 1 0.05
+        transakt
+            .execute_transaction(Transaction::Chargeback {
+                client: ClientId::new(1),
+                tx: TransactionId::new(1),
+            })
+            .unwrap();
+        let account = transakt.accounts.get(&ClientId::new(1)).unwrap();
+        assert_eq!(account.available(), &Currency::new(0, 0).unwrap());
+        assert_eq!(account.held(), &Currency::new(0, 0).unwrap());
+        assert_eq!(account.total(), Currency::new(0, 0).ok());
+        assert!(account.is_locked());
     }
 }
