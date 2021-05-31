@@ -1,6 +1,6 @@
-mod account;
-mod currency;
-mod transaction;
+pub mod account;
+pub mod currency;
+pub mod transaction;
 
 use crate::transaction::{ClientId, Transaction, TransactionId, TransactionRow};
 
