@@ -61,7 +61,7 @@ impl Transakt {
                 client,
                 tx,
                 amount,
-                disputed,
+                ..
             } => {
                 if amount.is_negative() {
                     log::warn!("Negative withdraw {:?} {:?}", tx, amount);
@@ -89,12 +89,12 @@ impl Transakt {
                 account.withdraw(amount)?;
                 self.transactions.insert(tx, transaction);
             }
-            Transaction::Dispute { client, tx } => {
+            Transaction::Dispute { tx, .. } => {
                 if let Some(transaction) = self.transactions.get_mut(&tx) {
                     match transaction {
                         Transaction::Deposit {
-                            client: client,
-                            tx: tx,
+                            client ,
+                            tx,
                             amount,
                             disputed,
                         } => {
@@ -105,7 +105,7 @@ impl Transakt {
                             *disputed = true;
                             // should never happen since we already have an existing transaction.
                             let account = self.accounts.get_mut(client).unwrap();
-                            account.hold(*amount);
+                            account.hold(*amount)?;
                         }
                         _ => {
                             log::warn!("Invalid dispute on {:?}", tx);
@@ -113,12 +113,12 @@ impl Transakt {
                     }
                 }
             }
-            Transaction::Resolve { client, tx } => {
+            Transaction::Resolve { tx, .. } => {
                 if let Some(transaction) = self.transactions.get_mut(&tx) {
                     match transaction {
                         Transaction::Deposit {
-                            client: client,
-                            tx: tx,
+                            client,
+                            tx,
                             amount,
                             disputed,
                         } => {
@@ -129,7 +129,7 @@ impl Transakt {
                             *disputed = false;
                             // should never happen since we already have an existing transaction.
                             let account = self.accounts.get_mut(client).unwrap();
-                            account.release(*amount);
+                            account.release(*amount)?;
                         }
                         _ => {
                             log::warn!("Invalid dispute on {:?}", tx);
