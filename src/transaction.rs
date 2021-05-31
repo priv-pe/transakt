@@ -34,6 +34,7 @@ pub enum Transaction {
         client: ClientId,
         tx: TransactionId,
         amount: Currency,
+        disputed: bool,
     },
     Withdrawal {
         client: ClientId,
@@ -86,7 +87,7 @@ impl TryFrom<TransactionRow> for Transaction {
                 client,
                 tx,
                 amount: Some(amount),
-            } => Ok(Transaction::Deposit { client, tx, amount }),
+            } => Ok(Transaction::Deposit { client, tx, amount , disputed: false}),
             TransactionRow {
                 tx_type: TransactionType::Withdrawal,
                 client,

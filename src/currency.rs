@@ -25,7 +25,7 @@ pub struct Currency {
     /// complex multiplication logic.
     /// Since we want to represent these values exactly, a f32 or f64 would not have worked for the
     /// purpose.
-    amount: u64,
+    amount: i64,
 }
 
 impl Default for Currency {
@@ -40,15 +40,20 @@ impl Currency {
     ///  * 1USD = 100 cents, DECIMAL_DIGITS = 2
     ///  * 1BTC = 100_000_000 Sats, DECIMAL_DIGITS = 8
     const DECIMAL_DIGITS: u32 = 4;
-    const UNIT_IN_DECIMALS: u64 = 10u64.pow(Self::DECIMAL_DIGITS);
+    const UNIT_IN_DECIMALS: i64 = 10i64.pow(Self::DECIMAL_DIGITS);
 
     /// Creates a MyCoinValue from a unitary value plus the decimal part.
-    pub fn new(unit: u64, decimal: u64) -> Result<Self, CurrencyError> {
+    pub fn new(unit: i64, decimal: u64) -> Result<Self, CurrencyError> {
         let value = unit
             .checked_mul(Currency::UNIT_IN_DECIMALS)
             .ok_or(CurrencyError::Overflow)?;
-        if decimal < Currency::UNIT_IN_DECIMALS {
+        if decimal < Currency::UNIT_IN_DECIMALS as u64 {
             // The decimals are in the lower bits and have been reserved, so can't overflow
+            let decimal = if value.is_negative() {
+                -(decimal as i64)
+            } else {
+                decimal as i64
+            };
             Ok(Self {
                 amount: value + decimal,
             })
@@ -67,6 +72,10 @@ impl Currency {
         Some(Currency {
             amount: self.amount.checked_sub(other.amount)?,
         })
+    }
+
+    pub fn is_negative(&self) -> bool {
+        self.amount.is_negative()
     }
 }
 
@@ -156,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_new_fail_overflow() {
-        let x = Currency::new(10u64.pow(16), 9999).unwrap_err();
+        let x = Currency::new(10i64.pow(16), 9999).unwrap_err();
         assert_eq!(x, CurrencyError::Overflow);
     }
 

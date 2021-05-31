@@ -51,8 +51,11 @@ impl Account {
 
     pub fn withdraw(&mut self, amount: Currency) -> Result<(), Error> {
         if !self.is_locked() {
-            let diff = self.available.checked_sub(amount);
-            self.available = diff.ok_or(Error::InsufficientFunds)?;
+            let diff = self.available.checked_sub(amount).ok_or(Error::Overflow)?;
+            if diff.is_negative() {
+                return Err(Error::InsufficientFunds);
+            }
+            self.available = diff;
             Ok(())
         } else {
             Err(Error::AccountLocked)

@@ -17,6 +17,7 @@ pub enum Error {
     Overflow,
     AccountLocked,
     InsufficientFunds,
+    InvalidTransaction,
 }
 
 pub struct Transakt {
@@ -52,8 +53,18 @@ impl Transakt {
 
     pub fn execute_transaction(&mut self, transaction: Transaction) -> Result<(), Error> {
         match transaction {
-            Transaction::Deposit { client, tx, amount } => {
+            Transaction::Deposit {
+                client,
+                tx,
+                amount,
+                disputed,
+            } => {
+                if amount.is_negative() {
+                    log::warn!("Negative withdraw {:?} {:?}", tx, amount);
+                    return Err(Error::InvalidTransaction);
+                }
                 if self.transactions.contains_key(&tx) {
+                    log::warn!("Duplicate transaction {:?}", tx);
                     return Err(Error::DuplicateTransaction(tx));
                 }
                 let account = self.accounts.entry(client).or_insert(Account::new(client));
@@ -62,7 +73,12 @@ impl Transakt {
                 self.transactions.insert(tx, transaction);
             }
             Transaction::Withdrawal { client, tx, amount } => {
+                if amount.is_negative() {
+                    log::warn!("Negative withdraw {:?} {:?}", tx, amount);
+                    return Err(Error::InvalidTransaction);
+                }
                 if self.transactions.contains_key(&tx) {
+                    log::warn!("Duplicate transaction {:?}", tx);
                     return Err(Error::DuplicateTransaction(tx));
                 }
                 let account = self.accounts.entry(client).or_insert(Account::new(client));
@@ -90,6 +106,7 @@ mod tests {
                 client: ClientId::new(1),
                 tx: TransactionId::new(1),
                 amount: Currency::new(1, 0).unwrap(),
+                disputed: false,
             })
             .unwrap();
         // account 1 shhould have 1.0
@@ -102,6 +119,7 @@ mod tests {
                 client: ClientId::new(1),
                 tx: TransactionId::new(2),
                 amount: Currency::new(1, 0).unwrap(),
+                disputed: false,
             })
             .unwrap();
         // account 1 shhould have 2.0
@@ -114,6 +132,7 @@ mod tests {
                 client: ClientId::new(2),
                 tx: TransactionId::new(3),
                 amount: Currency::new(0, 1000).unwrap(),
+                disputed: false,
             })
             .unwrap();
         // account 1 should have 1, account 2 should have 0.1
@@ -133,6 +152,7 @@ mod tests {
                 client: ClientId::new(1),
                 tx: TransactionId::new(1),
                 amount: Currency::new(2, 0).unwrap(),
+                disputed: false,
             })
             .unwrap();
         assert_eq!(transakt.accounts.len(), 1);
