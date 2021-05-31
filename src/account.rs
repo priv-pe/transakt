@@ -82,7 +82,6 @@ impl Account {
     }
 
     pub fn chargeback(&mut self, amount: Currency) -> Result<(), Error> {
-        if !self.is_locked() {
             let diff = self.held.checked_sub(amount);
             self.held = diff.ok_or(Error::Overflow)?;
             if self.held.is_negative() {
@@ -91,26 +90,18 @@ impl Account {
             }
             self.lock();
             Ok(())
-        } else {
-            Err(Error::AccountLocked)
-        }
     }
 
     pub fn hold(&mut self, amount: Currency) -> Result<(), Error> {
-        if !self.is_locked() {
             // TODO: Should happen atomically
             let sum = self.held.checked_add(amount);
             self.held = sum.ok_or(Error::Overflow)?;
             let diff = self.available.checked_sub(amount);
             self.available = diff.ok_or(Error::Overflow)?;
             Ok(())
-        } else {
-            Err(Error::AccountLocked)
-        }
     }
 
     pub fn release(&mut self, amount: Currency) -> Result<(), Error> {
-        if !self.is_locked() {
             // TODO: Should happen atomically
             let diff = self.held.checked_sub(amount);
             self.held = diff.ok_or(Error::Overflow)?;
@@ -121,8 +112,5 @@ impl Account {
             let sum = self.available.checked_add(amount);
             self.available = sum.ok_or(Error::Overflow)?;
             Ok(())
-        } else {
-            Err(Error::AccountLocked)
-        }
     }
 }
