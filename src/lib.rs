@@ -50,7 +50,12 @@ impl Transakt {
             let transaction: TransactionRow = record.map_err(|_| Error::TransactionParseError)?;
             let transaction: Transaction = transaction.try_into()?;
             log::info!("{:?}", transaction);
-            transakt.execute_transaction(transaction)?;
+            let res = transakt.execute_transaction(transaction);
+            match res {
+                Err(Error::TransactionParseError) =>  return Err(Error::TransactionParseError),
+                Err(Error::InsufficientHeldFunds) =>  return Err(Error::InsufficientHeldFunds),
+                x => log::info!("Result: {:?}", x)
+            }
         }
         Ok(transakt)
     }
