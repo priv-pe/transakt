@@ -1,12 +1,31 @@
 use crate::currency::Currency;
 use crate::transaction::ClientId;
 use crate::Error;
+use serde::{Serialize, Serializer};
+use serde::ser::{SerializeStruct, Error as SerdeError};
 
+#[derive(Clone)]
 pub struct Account {
     client: ClientId,
     available: Currency,
     held: Currency,
     locked: bool,
+}
+
+impl Serialize for Account {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        let mut map = serializer.serialize_struct("Account", 5)?;
+        map.serialize_field("client", &self.client)?;
+        map.serialize_field("available", &self.available)?;
+        map.serialize_field("help", &self.held)?;
+        let total = self.total().ok_or(S::Error::custom("Overflow"))?;
+        map.serialize_field("total", &total)?;
+        map.serialize_field("locked", &self.locked)?;
+        map.end()
+    }
 }
 
 impl Account {

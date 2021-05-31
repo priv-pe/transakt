@@ -7,5 +7,6 @@ fn main() {
         .nth(1)
         .expect("Usage: cargo run -- <input_file>");
     let filepath = Path::new(&filename);
-    Transakt::read_from_csv(filepath).unwrap();
+    let transakt = Transakt::read_from_csv(filepath).unwrap();
+    transakt.print_csv();
 }

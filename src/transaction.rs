@@ -1,9 +1,10 @@
 use crate::currency::Currency;
 use crate::Error;
 use serde::Deserialize;
+use serde::Serialize;
 use std::convert::TryFrom;
 
-#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Debug, Deserialize, Serialize, Eq, PartialEq, Hash, Copy, Clone)]
 #[serde(transparent)]
 pub struct ClientId {
     id: u16,

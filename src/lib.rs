@@ -60,6 +60,23 @@ impl Transakt {
         Ok(transakt)
     }
 
+    pub fn get_accounts(&self) -> Vec<Account> {
+        self.accounts.values().cloned().collect()
+    }
+
+    pub fn get_accounts_map(&self) -> &HashMap<ClientId, Account> {
+        &self.accounts
+    }
+
+    pub fn print_csv(&self) {
+        let accounts = self.get_accounts();
+        let mut out = csv::Writer::from_writer(std::io::stdout());
+        for account in accounts {
+            out.serialize(&account).unwrap();
+        }
+        out.flush().unwrap();
+    }
+
     pub fn execute_transaction(&mut self, transaction: Transaction) -> Result<(), Error> {
         match transaction {
             Transaction::Deposit {
