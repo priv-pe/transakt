@@ -74,4 +74,21 @@ impl Account {
             Err(Error::AccountLocked)
         }
     }
+
+    pub fn release(&mut self, amount: Currency) -> Result<(), Error> {
+        if !self.is_locked() {
+            // TODO: Should happen atomically
+            let diff = self.held.checked_sub(amount);
+            self.held = diff.ok_or(Error::Overflow)?;
+            if self.held.is_negative() {
+                // This should never happen
+                return Err(Error::InsufficientHeldFunds);
+            }
+            let sum = self.available.checked_add(amount);
+            self.available = sum.ok_or(Error::Overflow)?;
+            Ok(())
+        } else {
+            Err(Error::AccountLocked)
+        }
+    }
 }
