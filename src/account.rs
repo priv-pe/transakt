@@ -1,8 +1,8 @@
 use crate::currency::Currency;
 use crate::transaction::ClientId;
 use crate::Error;
+use serde::ser::{Error as SerdeError, SerializeStruct};
 use serde::{Serialize, Serializer};
-use serde::ser::{SerializeStruct, Error as SerdeError};
 
 #[derive(Clone)]
 pub struct Account {
@@ -14,8 +14,8 @@ pub struct Account {
 
 impl Serialize for Account {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut map = serializer.serialize_struct("Account", 5)?;
         map.serialize_field("client", &self.client)?;
@@ -60,8 +60,8 @@ impl Account {
 
     pub fn deposit(&mut self, amount: Currency) -> Result<(), Error> {
         if !self.is_locked() {
-            let sum = self.available.checked_add(amount);
-            self.available = sum.ok_or(Error::Overflow)?;
+            let sum = self.available.checked_add(amount).ok_or(Error::Overflow)?;
+            self.available = sum;
             Ok(())
         } else {
             Err(Error::AccountLocked)
@@ -82,35 +82,34 @@ impl Account {
     }
 
     pub fn chargeback(&mut self, amount: Currency) -> Result<(), Error> {
-            let diff = self.held.checked_sub(amount);
-            self.held = diff.ok_or(Error::Overflow)?;
-            if self.held.is_negative() {
-                // This should never happen
-                return Err(Error::InsufficientHeldFunds);
-            }
-            self.lock();
-            Ok(())
+        let diff = self.held.checked_sub(amount).ok_or(Error::Overflow)?;
+        if diff.is_negative() {
+            // This should never happen
+            return Err(Error::InsufficientHeldFunds);
+        }
+        self.held = diff;
+        self.lock();
+        Ok(())
     }
 
     pub fn hold(&mut self, amount: Currency) -> Result<(), Error> {
-            // TODO: Should happen atomically
-            let sum = self.held.checked_add(amount);
-            self.held = sum.ok_or(Error::Overflow)?;
-            let diff = self.available.checked_sub(amount);
-            self.available = diff.ok_or(Error::Overflow)?;
-            Ok(())
+        // First check that operations can happen, then update account
+        let sum = self.held.checked_add(amount).ok_or(Error::Overflow)?;
+        let diff = self.available.checked_sub(amount).ok_or(Error::Overflow)?;
+        self.held = sum;
+        self.available = diff;
+        Ok(())
     }
 
     pub fn release(&mut self, amount: Currency) -> Result<(), Error> {
-            // TODO: Should happen atomically
-            let diff = self.held.checked_sub(amount);
-            self.held = diff.ok_or(Error::Overflow)?;
-            if self.held.is_negative() {
-                // This should never happen
-                return Err(Error::InsufficientHeldFunds);
-            }
-            let sum = self.available.checked_add(amount);
-            self.available = sum.ok_or(Error::Overflow)?;
-            Ok(())
+        let diff = self.held.checked_sub(amount).ok_or(Error::Overflow)?;
+        let sum = self.available.checked_add(amount).ok_or(Error::Overflow)?;
+        if diff.is_negative() {
+            // This should never happen
+            return Err(Error::InsufficientHeldFunds);
+        }
+        self.held = diff;
+        self.available = sum;
+        Ok(())
     }
 }
