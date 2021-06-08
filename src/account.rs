@@ -20,7 +20,7 @@ impl Serialize for Account {
         let mut map = serializer.serialize_struct("Account", 5)?;
         map.serialize_field("client", &self.client)?;
         map.serialize_field("available", &self.available)?;
-        map.serialize_field("help", &self.held)?;
+        map.serialize_field("held", &self.held)?;
         let total = self.total().ok_or(S::Error::custom("Overflow"))?;
         map.serialize_field("total", &total)?;
         map.serialize_field("locked", &self.locked)?;
